@@ -1,0 +1,24 @@
+{
+  "name": "lexi-bridge",
+  "version": "1.0.0",
+  "description": "Cooperative dictionary-verified word ladders",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "test:studionet": "node scripts/playtest.mjs",
+    "verify": "node scripts/verify.mjs"
+  },
+  "author": "zuotu295",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "genlayer-js": "2.0.0",
+    "vue": "3.5.46"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "vite": "8.3.8"
+  }
+}
