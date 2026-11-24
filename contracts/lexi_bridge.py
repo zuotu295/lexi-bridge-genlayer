@@ -10,21 +10,32 @@ DICTIONARY = "https://api.dictionaryapi.dev/api/v2/entries/en/"
 
 
 def dictionary_verdict(word: str) -> str:
-    """Return a normalized verdict; outages must never count as invalid words."""
+    """Normalize the API result without treating service failures as bad words."""
     try:
         response = gl.nondet.web.get(DICTIONARY + word)
-        raw = response.body
-        if isinstance(raw, bytes):
-            raw = raw.decode("utf8")
-        if not isinstance(raw, str):
-            return "UNAVAILABLE"
-        body = json.loads(raw)
-    except Exception:
-        return "UNAVAILABLE"
+        status = getattr(response, "status", None)
 
-    if isinstance(body, dict):
-        if body.get("title") == "No Definitions Found":
-            return "UNKNOWN_WORD"
+        # The API uses HTTP 404 for an unknown headword. Some gateways omit its body.
+        if status == 404:
+            raw = response.body
+            if raw is None:
+                return "UNKNOWN_WORD"
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf8")
+            if not isinstance(raw, str):
+                return "UNAVAILABLE"
+            body = json.loads(raw)
+            return "UNKNOWN_WORD" if isinstance(body, dict) and body.get("title") == "No Definitions Found" else "UNAVAILABLE"
+
+        # Rate limits, server errors and every other non-success status are not lexical evidence.
+        if status != 200:
+            return "UNAVAILABLE"
+
+        raw = response.body
+        if not isinstance(raw, bytes):
+            return "UNAVAILABLE"
+        body = json.loads(raw.decode("utf8"))
+    except Exception:
         return "UNAVAILABLE"
 
     if isinstance(body, list) and body:
