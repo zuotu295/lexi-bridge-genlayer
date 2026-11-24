@@ -3,6 +3,7 @@
 A cooperative word ladder played by two wallet holders. Begin at **COLD** and reach **CARD** in at most eight accepted moves. Change one letter at a time and use a new dictionary word at each step.
 
 - [Open the public playtest](https://zuotu295.github.io/lexi-bridge-genlayer/)
+- [Stable Studionet V2 acceptance evidence](EVIDENCE_V2.md)
 - [Historical Stable Studionet V1 evidence](EVIDENCE.md)
 
 ## Wallets and seats
@@ -33,4 +34,4 @@ Node.js 24, Vue 3, Vite and GenLayerJS 2.0.0. The application targets Stable Stu
     python -m unittest discover -s tests
     npm run verify
 
-`npm run verify` is read-only and verifies the historical V1 deployment against `contracts/lexi_bridge_v1.py`, its finalized receipts and final board. To deploy and test a fresh V2 table, run `STUDIONET_FAUCET=1 npm run test:studionet`. This submits real Studionet transactions using disposable test wallets.
+`npm run verify` is read-only and verifies both deployed V1 and V2 sources, finalized receipts, lexical consensus outputs and final boards. To deploy and test a fresh V2 table, run `STUDIONET_FAUCET=1 npm run test:studionet`. This submits real Studionet transactions using disposable test wallets.

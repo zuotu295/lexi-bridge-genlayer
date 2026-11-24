@@ -1,0 +1,159 @@
+{
+  "chain_id": 61999,
+  "address": "0xe5d2be1ed6054628A13a0Bcb747eAcc58963825b",
+  "source_commit": "c91a1b6ebb50476cf73e97c947771b4969fe3f57",
+  "source_blob_sha": "ba1c6761d742fb1457977cd6a39c3ed584793e50",
+  "workflow_run": "https://github.com/zuotu295/lexi-bridge-genlayer/actions/runs/45372988511",
+  "deployment": {
+    "hash": "0x50cc886eabfdf7681d502e47d128f4bc27907642bda7f1dbffe06ef581965d17",
+    "state": "FINALIZED",
+    "execution": "SUCCESS",
+    "from": "0xfd83Ee6d0945A8A9A481Af77f1922942f9bd48B9",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x21e4F7ba6Ec0fbf70C019fbc0F9A797c3ed1F969": "agree",
+      "0x22Eda431B7fBC1216baE3b077a78c973a8719c58": "agree",
+      "0x5744305308D62592B7De585e1999c4Ea51E03C29": "agree",
+      "0x6DC61b906F74F44612c5545b0b79486133B3556d": "agree",
+      "0x813890bC5bEDEB4F5437570962379F04738F18Cb": "agree"
+    }
+  },
+  "joined": {
+    "hash": "0x474ef188bd515ddb17e44bfa97b07550a8e1ed20b70105de374456d7197cc9e8",
+    "state": "FINALIZED",
+    "execution": "SUCCESS",
+    "from": "0x0c92b5a2f40E557f52509252bAc92e3Ba1Beb7a3",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x23A15A452F19D1B616276fedC5B8B51d69082959": "agree",
+      "0x5e880d85a70De78dDEf86236d57c42e73F560615": "idle",
+      "0x62718FbDf0509A398aA525C152D60c1F7A9d33D3": "agree",
+      "0x725Ab89db6A9DD886Ba71Bc5E63a01070C325bE3": "agree",
+      "0x813890bC5bEDEB4F5437570962379F04738F18Cb": "agree"
+    }
+  },
+  "invalid": {
+    "hash": "0x3043ca2c639121455729548bf805431e0931ef31ab262f467c54ded8b170a680",
+    "state": "FINALIZED",
+    "execution": "SUCCESS",
+    "from": "0xfd83Ee6d0945A8A9A481Af77f1922942f9bd48B9",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x21e4F7ba6Ec0fbf70C019fbc0F9A797c3ed1F969": "idle",
+      "0x4eeaD269a60bB89c98a23c1BCd0bd101CafD90E0": "agree",
+      "0x5744305308D62592B7De585e1999c4Ea51E03C29": "agree",
+      "0x5e880d85a70De78dDEf86236d57c42e73F560615": "agree",
+      "0xee46B9Dc4c860149B1d140840284e5374854e746": "agree"
+    }
+  },
+  "unauthorized": {
+    "hash": "0x30d8d043bdd7b2efa954be92638c798144899b6bc53bc2923e9509cbb29be6bb",
+    "state": "FINALIZED",
+    "execution": "ERROR",
+    "from": "0x524D87AF9301c609E82dfD3212DDF94507b8e8A7",
+    "consensus": "MAJORITY_AGREE",
+    "error": "It is the other player's turn",
+    "votes": {
+      "0x4eeaD269a60bB89c98a23c1BCd0bd101CafD90E0": "agree",
+      "0x5744305308D62592B7De585e1999c4Ea51E03C29": "agree",
+      "0xE74a9088aD4d6dBf3C8cABcC0B91072d2a8c8afa": "agree",
+      "0xe358f855C96d8E7243836cf986eb037175B9467e": "idle",
+      "0xee46B9Dc4c860149B1d140840284e5374854e746": "agree"
+    }
+  },
+  "first": {
+    "hash": "0x9c488bb2435411e398f99bbd00b95b62df3f1c34b5f27e84c406dc5af48f1aa1",
+    "state": "FINALIZED",
+    "execution": "SUCCESS",
+    "from": "0xfd83Ee6d0945A8A9A481Af77f1922942f9bd48B9",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x534af64FFB6796Bc69aBf4C26c50788F1fFAfe56": "agree",
+      "0x5e880d85a70De78dDEf86236d57c42e73F560615": "idle",
+      "0x813890bC5bEDEB4F5437570962379F04738F18Cb": "agree",
+      "0xBE58b43DF1d991e054F743Cc5571dD7029F3B888": "agree",
+      "0xee46B9Dc4c860149B1d140840284e5374854e746": "idle"
+    }
+  },
+  "solved": {
+    "hash": "0xb980e7d22eecfc260615de0ca3f8cc1f6630f4cbdeef3bdc5921d55d0f0cd2e7",
+    "state": "FINALIZED",
+    "execution": "SUCCESS",
+    "from": "0x0c92b5a2f40E557f52509252bAc92e3Ba1Beb7a3",
+    "consensus": "MAJORITY_AGREE",
+    "votes": {
+      "0x19a02f95418A6c76091CDA37C4fc542CA82805c9": "agree",
+      "0x21e4F7ba6Ec0fbf70C019fbc0F9A797c3ed1F969": "idle",
+      "0x22Eda431B7fBC1216baE3b077a78c973a8719c58": "agree",
+      "0x240d2d7c8DF220110c26cfFFC532479319Cca0dC": "agree",
+      "0xee46B9Dc4c860149B1d140840284e5374854e746": "agree"
+    }
+  },
+  "closed": {
+    "hash": "0x5d2d16158527ee620a936d9ce1d7890add38212f33dfc64132b30e504aaf51cd",
+    "state": "FINALIZED",
+    "execution": "ERROR",
+    "from": "0xfd83Ee6d0945A8A9A481Af77f1922942f9bd48B9",
+    "consensus": "MAJORITY_AGREE",
+    "error": "The table is not playing",
+    "votes": {
+      "0x22Eda431B7fBC1216baE3b077a78c973a8719c58": "agree",
+      "0x240d2d7c8DF220110c26cfFFC532479319Cca0dC": "agree",
+      "0x4eeaD269a60bB89c98a23c1BCd0bd101CafD90E0": "idle",
+      "0x534af64FFB6796Bc69aBf4C26c50788F1fFAfe56": "agree",
+      "0x5744305308D62592B7De585e1999c4Ea51E03C29": "agree"
+    }
+  },
+  "afterInvalid": {
+    "host": "0xfd83Ee6d0945A8A9A481Af77f1922942f9bd48B9",
+    "guest": "0x0c92b5a2f40E557f52509252bAc92e3Ba1Beb7a3",
+    "phase": "PLAYING",
+    "goal": "card",
+    "limit": 8,
+    "turn": "0xfd83Ee6d0945A8A9A481Af77f1922942f9bd48B9",
+    "track": [
+      "cold"
+    ],
+    "attempts": [
+      {
+        "actor": "0xfd83Ee6d0945A8A9A481Af77f1922942f9bd48B9",
+        "from": "cold",
+        "word": "colx",
+        "verdict": "UNKNOWN_WORD"
+      }
+    ]
+  },
+  "finished": {
+    "host": "0xfd83Ee6d0945A8A9A481Af77f1922942f9bd48B9",
+    "guest": "0x0c92b5a2f40E557f52509252bAc92e3Ba1Beb7a3",
+    "phase": "SOLVED",
+    "goal": "card",
+    "limit": 8,
+    "turn": "",
+    "track": [
+      "cold",
+      "cord",
+      "card"
+    ],
+    "attempts": [
+      {
+        "actor": "0xfd83Ee6d0945A8A9A481Af77f1922942f9bd48B9",
+        "from": "cold",
+        "word": "colx",
+        "verdict": "UNKNOWN_WORD"
+      },
+      {
+        "actor": "0xfd83Ee6d0945A8A9A481Af77f1922942f9bd48B9",
+        "from": "cold",
+        "word": "cord",
+        "verdict": "VERIFIED"
+      },
+      {
+        "actor": "0x0c92b5a2f40E557f52509252bAc92e3Ba1Beb7a3",
+        "from": "cord",
+        "word": "card",
+        "verdict": "VERIFIED"
+      }
+    ]
+  }
+}
