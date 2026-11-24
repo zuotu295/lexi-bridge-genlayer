@@ -6,7 +6,7 @@ import { read, reader, verify } from './studionet.mjs';
 const file = name => readFile(new URL(name, import.meta.url), 'utf8');
 const evidence = JSON.parse(await file('../EVIDENCE.json'));
 assert.equal(Number(await reader.request({method:'eth_chainId'})),61999);
-assert.equal(await reader.getContractCode(evidence.address),await file('../contracts/lexi_bridge.py'));
+assert.equal(await reader.getContractCode(evidence.address),await file('../contracts/lexi_bridge_v1.py'));
 const lexical = {invalid:'UNKNOWN_WORD',first:'VERIFIED',solved:'VERIFIED'};
 const cases = ['deployment','joined','invalid','unauthorized','first','solved','closed'];
 await Promise.all(cases.map(async name => {
@@ -24,4 +24,4 @@ await Promise.all(cases.map(async name => {
   }
 }));
 assert.deepEqual(await read(evidence.address,'board'),evidence.finished);
-console.log('Verified source, finalized receipts, dictionary votes and solved board.');
+console.log('Verified historical V1 source, finalized receipts, lexical votes and solved board.');

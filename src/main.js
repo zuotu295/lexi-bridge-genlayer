@@ -1,4 +1,5 @@
-import { createApp, ref, computed, onMounted, onUnmounted } from 'vue/dist/vue.esm-bundler.js';
+import { createApp, ref, computed, onMounted, onUnmounted, markRaw } from 'vue/dist/vue.esm-bundler.js';
+import { watchInjectedProviders } from './wallet-discovery.js';
 import { createAccount, createClient } from 'genlayer-js';
 import { studionet } from 'genlayer-js/chains';
 import { TransactionHashVariant, transactionsStatusNumberToName } from 'genlayer-js/types';
@@ -19,7 +20,7 @@ createApp({
  setup(){
   const query = new URLSearchParams(location.search).get('table');
   const address = ref(addressFormat.test(query) ? query : demo.address);
-  const board = ref(null), wallets = ref([]), selected = ref(-1), candidate = ref(''), lookup = ref('');
+  const board = ref(null), wallets = ref([]), providers = ref([]), selected = ref(-1), candidate = ref(''), lookup = ref('');
   const error = ref(''), notice = ref(''), busy = ref(false), loading = ref(false), txs = ref([]);
   const wallet = computed(() => wallets.value[selected.value]);
   const moveAllowed = computed(() => board.value?.phase === 'PLAYING' && same(wallet.value?.address,board.value.turn));
@@ -29,7 +30,7 @@ createApp({
   const last = computed(() => track.value.at(-1));
   const changeCount = computed(() => candidate.value.length === 4 ? [...candidate.value].filter((letter,i)=>letter!==last.value?.[i]).length : 0);
   const attempts = computed(() => [...(board.value?.attempts ?? [])].map((entry,i)=>({...entry,id:i+1})).reverse());
-  let clients = [], version = 0, polling = false, timer;
+  let clients = [], walletCleanups = [], stopDiscovery, version = 0, polling = false, timer;
   function message(e){ return String(e?.shortMessage || e?.message || e).slice(0,220); }
   function save(){ try { localStorage.setItem('lexibridge-txs',JSON.stringify(txs.value)); } catch {} }
   async function refresh(){
@@ -47,20 +48,101 @@ createApp({
     history.replaceState(null,'','?table='+next);
     await refresh();
   }
+  function removeWallet(index){
+    if(index<0||index>=wallets.value.length)return;
+    walletCleanups[index]?.();
+    walletCleanups.splice(index,1);
+    wallets.value.splice(index,1);
+    clients.splice(index,1);
+    if(!wallets.value.length)selected.value=-1;
+    else if(selected.value>index)selected.value-=1;
+    else if(selected.value===index)selected.value=Math.min(index,wallets.value.length-1);
+  }
+  function resetWallets(){
+    for(const cleanup of walletCleanups)cleanup?.();
+    walletCleanups=[];
+    clients=[];
+    wallets.value=[];
+    selected.value=-1;
+  }
   async function addWallet(){
-    if(busy.value || wallets.value.length>=2)return;
+    if(busy.value||wallets.value.length>=2)return;
     busy.value=true;error.value='';
-    try {
+    try{
       const account=createAccount();
       const client=createClient({chain:studionet,account});
       await client.request({method:'sim_fundAccount',params:[account.address,10**18]});
       const balance=await client.request({method:'eth_getBalance',params:[account.address,'latest']});
       clients.push(client);
-      wallets.value.push({address:account.address,balance:(Number(BigInt(balance))/1e18).toFixed(3)});
+      walletCleanups.push(null);
+      wallets.value.push({address:account.address,balance:(Number(BigInt(balance))/1e18).toFixed(3),name:'Test wallet',type:'test',chainId:'0xf22f'});
       selected.value=wallets.value.length-1;
+      notice.value='Temporary test wallet funded. Its private key stays in this tab only.';
     }catch(e){error.value=message(e);}finally{busy.value=false;}
   }
-  function resetWallets(){clients=[];wallets.value=[];selected.value=-1;}
+  async function connectWallet(item){
+    if(busy.value||wallets.value.length>=2)return;
+    busy.value=true;error.value='';
+    try{
+      const provider=item.provider;
+      const accounts=await provider.request({method:'eth_requestAccounts'});
+      if(!Array.isArray(accounts)||!addressFormat.test(accounts[0]||''))throw new Error('The wallet did not return a valid account.');
+      const client=createClient({chain:studionet,account:accounts[0],provider});
+      await client.connect('studionet');
+      const chainId=String(await provider.request({method:'eth_chainId'})).toLowerCase();
+      if(chainId!=='0xf22f')throw new Error('Connect the wallet to Stable Studionet (61999).');
+      const existing=wallets.value.findIndex(w=>same(w.address,accounts[0]));
+      if(existing>=0){selected.value=existing;notice.value='This account is already connected to a seat.';return;}
+      clients.push(client);
+      walletCleanups.push(null);
+      wallets.value.push({address:accounts[0],balance:'',name:item.name,type:'browser',chainId,provider:markRaw(provider)});
+      selected.value=wallets.value.length-1;
+      let currentAddress=accounts[0];
+      const accountsChanged=(nextAccounts)=>{
+        const index=wallets.value.findIndex(w=>same(w.address,currentAddress));
+        if(index<0)return;
+        if(!Array.isArray(nextAccounts)||!addressFormat.test(nextAccounts[0]||'')){
+          removeWallet(index);
+          notice.value='Wallet disconnected from this player seat.';
+          return;
+        }
+        const nextAddress=nextAccounts[0];
+        const duplicate=wallets.value.findIndex((w,i)=>i!==index&&same(w.address,nextAddress));
+        if(duplicate>=0){
+          error.value='This account is already assigned to the other connected seat.';
+          removeWallet(index);
+          return;
+        }
+        currentAddress=nextAddress;
+        wallets.value[index]={...wallets.value[index],address:nextAddress};
+        clients[index]=createClient({chain:studionet,account:nextAddress,provider});
+      };
+      const chainChanged=(nextChain)=>{
+        const index=wallets.value.findIndex(w=>same(w.address,currentAddress));
+        if(index<0)return;
+        const next=String(nextChain).toLowerCase();
+        wallets.value[index]={...wallets.value[index],chainId:next};
+        if(next!=='0xf22f')error.value='Switch this wallet back to Stable Studionet (61999) before signing.';
+        else if(error.value.startsWith('Switch this wallet'))error.value='';
+      };
+      provider.on?.('accountsChanged',accountsChanged);
+      provider.on?.('chainChanged',chainChanged);
+      const remove=provider.removeListener?.bind(provider)||provider.off?.bind(provider);
+      const index=wallets.value.length-1;
+      walletCleanups[index]=()=>{
+        remove?.('accountsChanged',accountsChanged);
+        remove?.('chainChanged',chainChanged);
+      };
+      notice.value='Connected '+item.name+'. The wallet signs transactions; the application never receives its private key.';
+    }catch(e){error.value=message(e);}finally{busy.value=false;}
+  }
+  async function ensureWalletNetwork(){
+    const active=wallet.value;
+    if(active?.type!=='browser')return;
+    const chainId=String(await active.provider.request({method:'eth_chainId'})).toLowerCase();
+    if(chainId!=='0xf22f')throw new Error('Switch the connected wallet to Stable Studionet (61999) before signing.');
+    active.chainId=chainId;
+  }
   async function poll(){
     if(polling)return;
     polling=true;
@@ -95,6 +177,7 @@ createApp({
     if(!confirm(label+'\nStable Studionet 61999\nSigner: '+wallet.value.address))return;
     busy.value=true;error.value='';
     try {
+      await ensureWalletNetwork();
       const fees=await feeOptions(client);
       const hash=kind==='create'
         ? await client.deployContract({code:source,args:[],fees,leaderOnly:false})
@@ -108,20 +191,21 @@ createApp({
     catch{notice.value=address.value;}
   }
   onMounted(()=>{
+    stopDiscovery=watchInjectedProviders(item=>{if(!providers.value.some(p=>p.provider===item.provider))providers.value.push({...item,provider:markRaw(item.provider)});});
     try {const cache=JSON.parse(localStorage.getItem('lexibridge-txs')||'[]'); if(Array.isArray(cache))txs.value=cache;}catch{}
     void refresh();void poll();timer=setInterval(poll,7000);
   });
-  onUnmounted(()=>clearInterval(timer));
-  return {address,board,wallets,wallet,selected,candidate,lookup,error,notice,busy,loading,txs,moveAllowed,seatOpen,pending,track,last,
-          changeCount,attempts,demo,explorer,same,short,showPhase,open,refresh,addWallet,resetWallets,act,share};
+  onUnmounted(()=>{clearInterval(timer);stopDiscovery?.();for(const cleanup of walletCleanups)cleanup?.();});
+  return {address,board,wallets,wallet,providers,selected,candidate,lookup,error,notice,busy,loading,txs,moveAllowed,seatOpen,pending,track,last,
+          changeCount,attempts,demo,explorer,same,short,showPhase,open,refresh,addWallet,connectWallet,removeWallet,resetWallets,act,share};
  },
  template:`
 <header><a href="./" class="brand">Lexi<span>Bridge</span></a><span class="network">STUDIONET 61999</span><button @click="open(demo.address)">Public playtest</button></header>
 <main>
 <section class="intro"><p>COOPERATIVE WORD LADDER</p><h1>Cross one letter at a time.</h1><p>Two players. Four-letter words. Make a path to the target together.</p></section>
-<section class="tools"><div><button @click="addWallet" :disabled="busy || wallets.length===2">Add test seat wallet</button><button @click="act('create')" :disabled="!wallet || busy || pending">Create table</button><button v-if="wallets.length" @click="resetWallets" :disabled="busy">Clear wallets</button></div>
+<section class="tools"><div><button v-for="item in providers" :key="item.id" @click="connectWallet(item)" :disabled="busy || wallets.length===2">Connect {{item.name}}</button><button @click="addWallet" :disabled="busy || wallets.length===2">Add test seat wallet</button><button @click="act('create')" :disabled="!wallet || busy || pending">Create table</button><button v-if="wallets.length" @click="resetWallets" :disabled="busy">Clear wallets</button></div>
 <form @submit.prevent="open(lookup.trim())"><input v-model="lookup" aria-label="Table address" placeholder="Studionet table address"><button>Open table</button></form>
-<div class="wallets" v-if="wallets.length"><button v-for="(w,i) in wallets" :key="w.address" @click="selected=i" :aria-pressed="selected===i">Wallet {{i+1}} · {{short(w.address)}} · {{w.balance}} test GEN</button><small>Session-only test keys. Reloading discards them.</small></div>
+<div class="wallets" v-if="wallets.length"><button v-for="(w,i) in wallets" :key="w.address" @click="selected=i" :aria-pressed="selected===i">Seat {{i+1}} · {{w.name}} · {{short(w.address)}} <span v-if="selected===i">✓</span><span v-if="w.type==='test'"> · {{w.balance}} test GEN</span></button><button v-for="(w,i) in wallets" :key="'disconnect-'+w.address" @click="removeWallet(i)" :disabled="busy">Disconnect seat {{i+1}}</button><small>Reconnect the same browser wallet address after reload or on another device. Temporary test-wallet keys are not recoverable after closing this tab.</small></div>
 </section>
 <p v-if="error" role="alert" class="alert">{{error}}</p><p v-if="notice" role="status">{{notice}}</p>
 <p v-if="loading" role="status">Reading finalized board…</p>

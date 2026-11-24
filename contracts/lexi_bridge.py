@@ -4,24 +4,36 @@ import json
 import re
 from genlayer import Address, DynArray, gl
 
-# These fixed puzzle endpoints are supplied by the game designer.
 START, GOAL, LIMIT = "cold", "card", 8
 WORD = re.compile(r"[a-z]{4}")
+DICTIONARY = "https://api.dictionaryapi.dev/api/v2/entries/en/"
 
 
 def dictionary_verdict(word: str) -> str:
-    response = gl.nondet.web.get("https://api.datamuse.com/words?max=100&sp=" + word)
+    """Return a normalized verdict; outages must never count as invalid words."""
     try:
-        body = json.loads(response.body.decode("utf8"))
-    except (ValueError, AttributeError):
+        response = gl.nondet.web.get(DICTIONARY + word)
+        raw = response.body
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf8")
+        if not isinstance(raw, str):
+            return "UNAVAILABLE"
+        body = json.loads(raw)
+    except Exception:
         return "UNAVAILABLE"
-    if not isinstance(body, list) or any(
-        not isinstance(item, dict) or not isinstance(item.get("word"), str) for item in body
-    ):
+
+    if isinstance(body, dict):
+        if body.get("title") == "No Definitions Found":
+            return "UNKNOWN_WORD"
         return "UNAVAILABLE"
-    if any(item["word"] == word for item in body):
-        return "VERIFIED"
-    return "UNKNOWN_WORD"
+
+    if isinstance(body, list) and body:
+        if not all(isinstance(item, dict) and isinstance(item.get("word"), str) for item in body):
+            return "UNAVAILABLE"
+        if any(item["word"].casefold() == word.casefold() for item in body):
+            return "VERIFIED"
+
+    return "UNAVAILABLE"
 
 
 class LexiBridge(gl.Contract):
@@ -60,9 +72,11 @@ class LexiBridge(gl.Contract):
             raise gl.vm.UserError("A word on the path cannot be reused")
         if len(self.attempts) >= 32:
             raise gl.vm.UserError("The attempt budget is exhausted")
+
         verdict = gl.eq_principle.strict_eq(lambda: dictionary_verdict(word))
         if verdict == "UNAVAILABLE":
             raise gl.vm.UserError("Dictionary unavailable; retry this turn")
+
         self.attempts.append(json.dumps({"actor": str(turn), "from": current, "word": word, "verdict": verdict}))
         if verdict == "VERIFIED":
             self.track.append(word)
@@ -76,6 +90,13 @@ class LexiBridge(gl.Contract):
     @gl.public.view
     def board(self) -> str:
         turn = self.host if len(self.track) % 2 else self.guest
-        return json.dumps({"host": str(self.host), "guest": str(self.guest), "phase": self.phase, "goal": GOAL,
-                           "limit": LIMIT, "turn": str(turn) if self.phase == "PLAYING" else "",
-                           "track": list(self.track), "attempts": [json.loads(row) for row in self.attempts]})
+        return json.dumps({
+            "host": str(self.host),
+            "guest": str(self.guest),
+            "phase": self.phase,
+            "goal": GOAL,
+            "limit": LIMIT,
+            "turn": str(turn) if self.phase == "PLAYING" else "",
+            "track": list(self.track),
+            "attempts": [json.loads(row) for row in self.attempts],
+        })
