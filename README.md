@@ -8,7 +8,7 @@ A cooperative word ladder played by two wallet holders. Begin at **COLD** and re
 
 ## Wallets and seats
 
-Connect MetaMask, OKX Wallet or another compatible injected wallet through EIP-6963 discovery and EIP-1193 signing. The application connects the wallet to Stable Studionet (chain 61999), requests transaction approval from the wallet, and never receives or stores its private key. A second distinct wallet can occupy the other seat in the same browser. After reload or on another device, reconnect the same wallet address; the host/guest assignments and current turn are read from chain.
+Connect MetaMask, OKX Wallet or another compatible injected wallet through EIP-6963 discovery and the selected provider's EIP-1193 account/signing methods. The app adds or switches to Stable Studionet (chain 61999) through the wallet's network RPC methods; it does not call MetaMask Snap APIs or require Snap installation. The wallet approves transactions, and the application never receives or stores its private key. A second distinct wallet can occupy the other seat in the same browser. After reload or on another device, reconnect the same wallet address; the host/guest assignments and current turn are read from chain.
 
 A temporary faucet-funded test wallet remains available for demonstrations. Its key exists only in tab memory and cannot be recovered after closing or reloading the page. If a player loses access to the private key assigned to a seat, the application cannot recover it or change the on-chain seat.
 

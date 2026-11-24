@@ -1,5 +1,5 @@
 import { createApp, ref, computed, onMounted, onUnmounted, markRaw } from 'vue/dist/vue.esm-bundler.js';
-import { watchInjectedProviders } from './wallet-discovery.js';
+import { ensureStudionet, watchInjectedProviders } from './wallet-discovery.js';
 import { createAccount, createClient } from 'genlayer-js';
 import { studionet } from 'genlayer-js/chains';
 import { TransactionHashVariant, transactionsStatusNumberToName } from 'genlayer-js/types';
@@ -87,10 +87,8 @@ createApp({
       const provider=item.provider;
       const accounts=await provider.request({method:'eth_requestAccounts'});
       if(!Array.isArray(accounts)||!addressFormat.test(accounts[0]||''))throw new Error('The wallet did not return a valid account.');
+      const chainId=await ensureStudionet(provider);
       const client=createClient({chain:studionet,account:accounts[0],provider});
-      await client.connect('studionet');
-      const chainId=String(await provider.request({method:'eth_chainId'})).toLowerCase();
-      if(chainId!=='0xf22f')throw new Error('Connect the wallet to Stable Studionet (61999).');
       const existing=wallets.value.findIndex(w=>same(w.address,accounts[0]));
       if(existing>=0){selected.value=existing;notice.value='This account is already connected to a seat.';return;}
       clients.push(client);
@@ -139,9 +137,7 @@ createApp({
   async function ensureWalletNetwork(){
     const active=wallet.value;
     if(active?.type!=='browser')return;
-    const chainId=String(await active.provider.request({method:'eth_chainId'})).toLowerCase();
-    if(chainId!=='0xf22f')throw new Error('Switch the connected wallet to Stable Studionet (61999) before signing.');
-    active.chainId=chainId;
+    active.chainId=await ensureStudionet(active.provider);
   }
   async function poll(){
     if(polling)return;
