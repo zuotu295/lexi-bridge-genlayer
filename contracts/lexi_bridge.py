@@ -6,44 +6,42 @@ from genlayer import Address, DynArray, gl
 
 START, GOAL, LIMIT = "cold", "card", 8
 WORD = re.compile(r"[a-z]{4}")
-DICTIONARY = "https://api.dictionaryapi.dev/api/v2/entries/en/"
+WIKTIONARY_API = "https://en.wiktionary.org/w/api.php?action=query&titles="
 
 
 def dictionary_verdict(word: str) -> str:
-    """Normalize the API result without treating service failures as bad words."""
+    """Check for an exact English Wiktionary entry; API failures are not word rejections."""
     try:
-        response = gl.nondet.web.get(DICTIONARY + word)
-        status = getattr(response, "status", None)
-
-        # The API uses HTTP 404 for an unknown headword. Some gateways omit its body.
-        if status == 404:
-            raw = response.body
-            if raw is None:
-                return "UNKNOWN_WORD"
-            if isinstance(raw, bytes):
-                raw = raw.decode("utf8")
-            if not isinstance(raw, str):
-                return "UNAVAILABLE"
-            body = json.loads(raw)
-            return "UNKNOWN_WORD" if isinstance(body, dict) and body.get("title") == "No Definitions Found" else "UNAVAILABLE"
-
-        # Rate limits, server errors and every other non-success status are not lexical evidence.
-        if status != 200:
+        response = gl.nondet.web.get(
+            WIKTIONARY_API + word + "&format=json&formatversion=2",
+            headers={"User-Agent": "LexiBridge/2.0 (https://github.com/zuotu295/lexi-bridge-genlayer)"},
+        )
+        if getattr(response, "status", None) != 200 or response.body is None:
             return "UNAVAILABLE"
-
         raw = response.body
-        if not isinstance(raw, bytes):
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf8")
+        if not isinstance(raw, str):
             return "UNAVAILABLE"
-        body = json.loads(raw.decode("utf8"))
+        body = json.loads(raw)
     except Exception:
         return "UNAVAILABLE"
 
-    if isinstance(body, list) and body:
-        if not all(isinstance(item, dict) and isinstance(item.get("word"), str) for item in body):
-            return "UNAVAILABLE"
-        if any(item["word"].casefold() == word.casefold() for item in body):
-            return "VERIFIED"
+    if not isinstance(body, dict):
+        return "UNAVAILABLE"
+    query = body.get("query")
+    pages = query.get("pages") if isinstance(query, dict) else None
+    if not isinstance(pages, list) or len(pages) != 1 or not isinstance(pages[0], dict):
+        return "UNAVAILABLE"
 
+    page = pages[0]
+    title = page.get("title")
+    if not isinstance(title, str) or title.casefold() != word.casefold():
+        return "UNAVAILABLE"
+    if page.get("missing") is True or page.get("invalid") is True:
+        return "UNKNOWN_WORD"
+    if isinstance(page.get("pageid"), int) and page["pageid"] > 0:
+        return "VERIFIED"
     return "UNAVAILABLE"
 
 

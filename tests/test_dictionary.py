@@ -26,53 +26,47 @@ class DictionaryResponses(unittest.TestCase):
         else:
             body = json.dumps(payload).encode("utf8")
         sdk.gl.nondet = SimpleNamespace(
-            web=SimpleNamespace(get=lambda url: SimpleNamespace(status=status, body=body))
+            web=SimpleNamespace(get=lambda url, headers=None: SimpleNamespace(status=status, body=body))
         )
 
-    def test_exact_headword_is_verified(self):
-        self.set_response([{"word": "cord", "meanings": []}], status=200)
+    def test_exact_entry_is_verified(self):
+        self.set_response({"query": {"pages": [{"pageid": 123, "ns": 0, "title": "cord"}]}})
         self.assertEqual(contract.dictionary_verdict("cord"), "VERIFIED")
 
-    def test_exact_headword_comparison_is_case_insensitive(self):
-        self.set_response([{"word": "CORD", "meanings": []}], status=200)
+    def test_title_normalization_is_case_insensitive(self):
+        self.set_response({"query": {"pages": [{"pageid": 123, "ns": 0, "title": "Cord"}]}})
         self.assertEqual(contract.dictionary_verdict("cord"), "VERIFIED")
 
-    def test_http_404_without_body_is_an_unknown_word(self):
-        self.set_response(None, status=404)
+    def test_missing_page_is_an_unknown_word(self):
+        self.set_response({"query": {"pages": [{"ns": 0, "title": "colx", "missing": True}]}})
         self.assertEqual(contract.dictionary_verdict("colx"), "UNKNOWN_WORD")
 
-    def test_http_404_with_documented_error_body_is_an_unknown_word(self):
-        self.set_response({
-            "title": "No Definitions Found",
-            "message": "No entry",
-            "resolution": "Try another word",
-        }, status=404)
+    def test_invalid_page_is_an_unknown_word(self):
+        self.set_response({"query": {"pages": [{"title": "colx", "invalid": True}]}})
         self.assertEqual(contract.dictionary_verdict("colx"), "UNKNOWN_WORD")
 
-    def test_other_api_error_is_unavailable(self):
-        self.set_response({"title": "API Rate Limit Exceeded", "message": "Slow down"}, status=429)
+    def test_http_errors_are_unavailable(self):
+        for status in (403, 429, 500, 503):
+            with self.subTest(status=status):
+                self.set_response({"query": {"pages": [{"ns": 0, "title": "colx", "missing": True}]}}, status=status)
+                self.assertEqual(contract.dictionary_verdict("colx"), "UNAVAILABLE")
+
+    def test_missing_body_is_unavailable(self):
+        self.set_response(None, status=200)
         self.assertEqual(contract.dictionary_verdict("cord"), "UNAVAILABLE")
 
-    def test_server_error_is_not_a_lexical_rejection(self):
-        self.set_response({"title": "No Definitions Found"}, status=503)
-        self.assertEqual(contract.dictionary_verdict("colx"), "UNAVAILABLE")
-
-    def test_success_status_with_error_object_is_unavailable(self):
-        self.set_response({"title": "No Definitions Found"}, status=200)
-        self.assertEqual(contract.dictionary_verdict("colx"), "UNAVAILABLE")
-
-    def test_unexpected_array_is_unavailable(self):
-        for payload in ([], [{"word": None}], [{"word": "card"}]):
+    def test_unexpected_response_shape_is_unavailable(self):
+        for payload in ({}, {"query": {"pages": []}}, {"query": {"pages": [{"title": "cord"}]}}):
             with self.subTest(payload=payload):
-                self.set_response(payload, status=200)
+                self.set_response(payload)
                 self.assertEqual(contract.dictionary_verdict("cord"), "UNAVAILABLE")
 
     def test_malformed_json_is_unavailable(self):
-        self.set_response(b"<html>not json</html>", status=200)
+        self.set_response(b"<html>not json</html>")
         self.assertEqual(contract.dictionary_verdict("cord"), "UNAVAILABLE")
 
     def test_transport_failure_is_unavailable(self):
-        def fail(_url):
+        def fail(_url, headers=None):
             raise TimeoutError()
         sdk.gl.nondet = SimpleNamespace(web=SimpleNamespace(get=fail))
         self.assertEqual(contract.dictionary_verdict("cord"), "UNAVAILABLE")
