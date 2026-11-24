@@ -18,19 +18,26 @@ spec.loader.exec_module(contract)
 
 
 class DictionaryResponses(unittest.TestCase):
-    def set_response(self, payload, status=200):
+    def set_response(self, payload, status=200, legacy=False):
         if payload is None:
             body = None
         elif isinstance(payload, bytes):
             body = payload
         else:
             body = json.dumps(payload).encode("utf8")
-        sdk.gl.nondet = SimpleNamespace(
-            web=SimpleNamespace(get=lambda url, headers=None: SimpleNamespace(status=status, body=body))
-        )
+        response = SimpleNamespace(body=body)
+        if legacy:
+            response.status = status
+        else:
+            response.status_code = status
+        sdk.gl.nondet = SimpleNamespace(web=SimpleNamespace(get=lambda url, headers=None: response))
 
     def test_exact_entry_is_verified(self):
         self.set_response({"query": {"pages": [{"pageid": 123, "ns": 0, "title": "cord"}]}})
+        self.assertEqual(contract.dictionary_verdict("cord"), "VERIFIED")
+
+    def test_legacy_status_property_fallback(self):
+        self.set_response({"query": {"pages": [{"pageid": 123, "ns": 0, "title": "cord"}]}}, legacy=True)
         self.assertEqual(contract.dictionary_verdict("cord"), "VERIFIED")
 
     def test_title_normalization_is_case_insensitive(self):

@@ -16,7 +16,10 @@ def dictionary_verdict(word: str) -> str:
             WIKTIONARY_API + word + "&format=json&formatversion=2",
             headers={"User-Agent": "LexiBridge/2.0 (https://github.com/zuotu295/lexi-bridge-genlayer)"},
         )
-        if getattr(response, "status", None) != 200 or response.body is None:
+        status = getattr(response, "status_code", None)
+        if status is None:
+            status = getattr(response, "status", None)
+        if status != 200 or response.body is None:
             return "UNAVAILABLE"
         raw = response.body
         if isinstance(raw, bytes):
